@@ -10,3 +10,10 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     email: str
     password: str
+
+class FilmCreate(BaseModel):
+    name: str
+    genre: str
+    description: str
+    release_year: int
+    
