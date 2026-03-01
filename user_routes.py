@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
-from schemas import UserCreate, UserLogin
+from schemas import UserCreate, UserLogin, UserResponse
 from dependencies import get_session
-from models import User
+from models import FavoriteFilm, User
 from main import bcrypt_hash, SECRET_KEY, HASH
 import jwt
 from datetime import datetime, timedelta
@@ -46,7 +46,117 @@ def read_current_user(token: str, session=Depends(get_session)):
         user_gmail = payload.get("sub")
 
         user = session.query(User).filter(User.gmail == user_gmail).first()
-        return {"user_name": user.name, "user_email": user.gmail}
+
+        return UserResponse(name=user.name, email=user.gmail, favorite_films=user.favorite_films)
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+@user_router.post("/add_favorite")
+def add_favorite_film(token: str, film_name: str, session=Depends(get_session)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[HASH])
+        user_gmail = payload.get("sub")
+
+        user = session.query(User).filter(User.gmail == user_gmail).first()
+
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        favorite_film = FavoriteFilm(film_name=film_name, user_id=user.id)
+        session.add(favorite_film)
+        session.commit()
+
+        return {"message": "Film added to favorites"}
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+
+@user_router.patch("/remove_favorite")
+def remove_favorite_film(token: str, film_name: str, session=Depends(get_session)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[HASH])
+        user_gmail = payload.get("sub")
+
+        user = session.query(User).filter(User.gmail == user_gmail).first()
+
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        favorite_film = session.query(FavoriteFilm).filter(FavoriteFilm.film_name == film_name, FavoriteFilm.user_id == user.id).first()
+
+        if not favorite_film:
+            raise HTTPException(status_code=404, detail="Favorite film not found")
+
+        session.delete(favorite_film)
+        session.commit()
+
+        return {"message": "Film removed from favorites"}
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+
+@user_router.patch("/update_password")
+def update_password(token: str, new_password: str, session=Depends(get_session)):    
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[HASH])
+        user_gmail = payload.get("sub")
+
+        user = session.query(User).filter(User.gmail == user_gmail).first()
+
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        new_password_hash = bcrypt_hash.hash(new_password)
+        user.password = new_password_hash
+        session.commit()
+
+        return {"message": "Password updated successfully"}
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+
+@user_router.delete("/delete")
+def delete_user(token: str, session=Depends(get_session)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[HASH])
+        user_gmail = payload.get("sub")
+
+        user = session.query(User).filter(User.gmail == user_gmail).first()
+
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        session.delete(user)
+        session.commit()
+
+        return {"message": "User deleted successfully"}
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+user_router.get("/favorites")
+def get_favorite_films(token: str, session=Depends(get_session)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[HASH])
+        user_gmail = payload.get("sub")
+
+        user = session.query(User).filter(User.gmail == user_gmail).first()
+
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        favorite_films = session.query(FavoriteFilm).filter(FavoriteFilm.user_id == user.id).all()
+
+        return {"favorite_films": [film.film_name for film in favorite_films]}
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError:

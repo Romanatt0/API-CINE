@@ -14,9 +14,9 @@ app = FastAPI()
 bcrypt_hash = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-from cinema_routes import router
+from films_routes import film_router
 from user_routes import user_router
 
-app.include_router(router)
+app.include_router(film_router)
 app.include_router(user_router)
 

@@ -36,13 +36,15 @@ class Film(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True, nullable=False, unique=True)
     name = Column(String, nullable=False)
+    description = Column(String, nullable=True) 
     genre = Column(SqlEnum(Genre), nullable=False)
     release_year = Column(Integer, nullable=False)
 
-    def __init__(self, name, genre: Genre, release_year):
+    def __init__(self, name, genre: Genre, release_year, description: str | None = None):
         self.name = name
         self.genre = genre
         self.release_year = release_year
+        self.description = description
 
     
 
