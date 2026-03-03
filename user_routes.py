@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from schemas import UserCreate, UserLogin, UserResponse
+from schemas import UserCreate, UserLogin, UserResponse, FilmResponse, FavoriteFilmResponse
 from dependencies import get_session
 from models import FavoriteFilm, User
 from main import bcrypt_hash, SECRET_KEY, HASH
@@ -30,7 +30,7 @@ def login_user(user_login: UserLogin, session=Depends(get_session)):
     
     # Geração do token JWT
     payload = {
-        "sub": user.gmail,
+        "sub": user.email,
         "exp": datetime.utcnow() + timedelta(hours=1)  
     }
 
@@ -43,11 +43,21 @@ def login_user(user_login: UserLogin, session=Depends(get_session)):
 def read_current_user(token: str, session=Depends(get_session)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[HASH])
-        user_gmail = payload.get("sub")
+        user_email = payload.get("sub")
 
-        user = session.query(User).filter(User.gmail == user_gmail).first()
+        user = session.query(User).filter(User.email == user_email).first()
 
-        return UserResponse(name=user.name, email=user.gmail, favorite_films=user.favorite_films)
+        favorite_films_response: list[FavoriteFilmResponse] = []
+        favorite_films = session.query(FavoriteFilm).filter(FavoriteFilm.user_id == user.id).all()
+
+        favorite_films_response = [
+            FavoriteFilmResponse(
+                film_name=film.film_name,
+                user_id=film.user_id
+            )
+            for film in favorite_films
+        ]
+        return UserResponse(name=user.name, email=user.email, favorite_films=favorite_films_response)
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError:
@@ -59,7 +69,7 @@ def add_favorite_film(token: str, film_name: str, session=Depends(get_session)):
         payload = jwt.decode(token, SECRET_KEY, algorithms=[HASH])
         user_gmail = payload.get("sub")
 
-        user = session.query(User).filter(User.gmail == user_gmail).first()
+        user = session.query(User).filter(User.email == user_gmail).first()
 
         if not user:
             raise HTTPException(status_code=404, detail="User not found")

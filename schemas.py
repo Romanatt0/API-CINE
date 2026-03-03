@@ -11,10 +11,6 @@ class UserLogin(BaseModel):
     email: str
     password: str
 
-class UserResponse(BaseModel):
-    name: str
-    email: str
-    favorite_films: list[str] = []
 class FilmCreate(BaseModel):
     name: str
     genre: str
@@ -27,3 +23,12 @@ class FilmResponse(BaseModel):
     genre: str
     description: str
     release_year: int
+
+class FavoriteFilmResponse(BaseModel):
+    film_name: str
+    user_id: int
+
+class UserResponse(BaseModel):
+    name: str
+    email: str
+    favorite_films: list[FavoriteFilmResponse] = []
