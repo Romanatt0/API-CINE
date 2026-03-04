@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
-from schemas import UserCreate, UserLogin, UserResponse, FilmResponse, FavoriteFilmResponse
-from dependencies import get_session
-from models import FavoriteFilm, User
+from schemas.schemas import UserCreate, UserLogin, UserResponse, FilmResponse, FavoriteFilmResponse
+from denpendencies.dependencies import get_session
+from models.models import FavoriteFilm, User
 from main import bcrypt_hash, SECRET_KEY, HASH
 import jwt
 from datetime import datetime, timedelta
@@ -115,9 +115,9 @@ def remove_favorite_film(token: str, film_name: str, session=Depends(get_session
 def update_password(token: str, new_password: str, session=Depends(get_session)):    
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[HASH])
-        user_gmail = payload.get("sub")
+        user_email = payload.get("sub")
 
-        user = session.query(User).filter(User.gmail == user_gmail).first()
+        user = session.query(User).filter(User.email == user_email).first()
 
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
@@ -137,9 +137,9 @@ def update_password(token: str, new_password: str, session=Depends(get_session))
 def delete_user(token: str, session=Depends(get_session)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[HASH])
-        user_gmail = payload.get("sub")
+        user_email = payload.get("sub")
 
-        user = session.query(User).filter(User.gmail == user_gmail).first()
+        user = session.query(User).filter(User.email == user_email).first()
 
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
