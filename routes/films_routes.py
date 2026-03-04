@@ -9,7 +9,7 @@ film_router = APIRouter(prefix="/films", tags=["films"])
 
 
 @film_router.post("/create")
-def create_film(film_create: FilmRequest, session=Depends(get_session)):
+async def create_film(film_create: FilmRequest, session=Depends(get_session)):
     film = session.query(Film).filter(Film.name == film_create.name).first()
 
     if film:
@@ -24,7 +24,7 @@ def create_film(film_create: FilmRequest, session=Depends(get_session)):
     raise HTTPException(status_code=201, detail="Film created successfully")
 
 @film_router.get("/{film_id}")
-def get_film(film_id: int, session=Depends(get_session)):
+async def get_film(film_id: int, session=Depends(get_session)):
     film = session.query(Film).filter(Film.id == film_id).first()
 
     if not film:
@@ -34,7 +34,7 @@ def get_film(film_id: int, session=Depends(get_session)):
     return FilmResponse(**film.__dict__)
 
 @film_router.patch("/update/{film_id}")
-def update_film(film_id: int, film_update: FilmRequest, session=Depends(get_session)):
+async def update_film(film_id: int, film_update: FilmRequest, session=Depends(get_session)):
     film = session.query(Film).filter(Film.id == film_id).first()
 
     if not film:
@@ -52,7 +52,7 @@ def update_film(film_id: int, film_update: FilmRequest, session=Depends(get_sess
     raise HTTPException(status_code=200, detail="Film updated successfully")
 
 @film_router.delete("/delete/{film_id}")
-def delete_film(film_id: int, session=Depends(get_session)):
+async def delete_film(film_id: int, session=Depends(get_session)):
     film = session.query(Film).filter(Film.id == film_id).first()
 
     if not film:
@@ -64,7 +64,7 @@ def delete_film(film_id: int, session=Depends(get_session)):
 
 
 @film_router.get("/all")
-def get_all_films(session=Depends(get_session)):
+async def get_all_films(session=Depends(get_session)):
 
     films: list[Film] = session.query(Film).all()  
 

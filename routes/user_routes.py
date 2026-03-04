@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 user_router = APIRouter(prefix="/users", tags=["users"])
 
 @user_router.post("/create") 
-def create_user(user_create: UserCreate, session=Depends(get_session)):
+async def create_user(user_create: UserCreate, session=Depends(get_session)):
     """Endpoint user create"""
     user  = session.query(User).filter(User.email==user_create.email).first()
 
@@ -21,7 +21,7 @@ def create_user(user_create: UserCreate, session=Depends(get_session)):
     raise HTTPException(status_code=201, detail="User created successfully")
 
 @user_router.post("/login")
-def login_user(user_login: UserLogin, session=Depends(get_session)):
+async def login_user(user_login: UserLogin, session=Depends(get_session)):
     user = session.query(User).filter(User.email == user_login.email).first()
 
     if not user or not bcrypt_hash.verify(user_login.password, user.password):
@@ -40,7 +40,7 @@ def login_user(user_login: UserLogin, session=Depends(get_session)):
 
 
 @user_router.get("/me")
-def read_current_user(token: str, session=Depends(get_session)):
+async def read_current_user(token: str, session=Depends(get_session)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[HASH])
         user_email = payload.get("sub")
@@ -64,7 +64,7 @@ def read_current_user(token: str, session=Depends(get_session)):
         raise HTTPException(status_code=401, detail="Invalid token")
     
 @user_router.post("/add_favorite")
-def add_favorite_film(token: str, film_name: str, session=Depends(get_session)):
+async def add_favorite_film(token: str, film_name: str, session=Depends(get_session)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[HASH])
         user_gmail = payload.get("sub")
@@ -86,7 +86,7 @@ def add_favorite_film(token: str, film_name: str, session=Depends(get_session)):
     
 
 @user_router.patch("/remove_favorite")
-def remove_favorite_film(token: str, film_name: str, session=Depends(get_session)):
+async def remove_favorite_film(token: str, film_name: str, session=Depends(get_session)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[HASH])
         user_gmail = payload.get("sub")
@@ -112,7 +112,7 @@ def remove_favorite_film(token: str, film_name: str, session=Depends(get_session
     
 
 @user_router.patch("/update_password")
-def update_password(token: str, new_password: str, session=Depends(get_session)):    
+async def update_password(token: str, new_password: str, session=Depends(get_session)):    
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[HASH])
         user_email = payload.get("sub")
@@ -134,7 +134,7 @@ def update_password(token: str, new_password: str, session=Depends(get_session))
     
 
 @user_router.delete("/delete")
-def delete_user(token: str, session=Depends(get_session)):
+async def delete_user(token: str, session=Depends(get_session)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[HASH])
         user_email = payload.get("sub")
@@ -154,7 +154,7 @@ def delete_user(token: str, session=Depends(get_session)):
         raise HTTPException(status_code=401, detail="Invalid token")
     
 user_router.get("/favorites")
-def get_favorite_films(token: str, session=Depends(get_session)):
+async def get_favorite_films(token: str, session=Depends(get_session)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[HASH])
         user_gmail = payload.get("sub")
