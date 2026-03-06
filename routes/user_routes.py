@@ -7,6 +7,37 @@ import jwt
 from datetime import datetime, timedelta
 user_router = APIRouter(prefix="/users", tags=["users"])
 
+def verify_authentication(user_login: UserLogin, session=Depends(get_session)):
+    try:
+        user = session.query(User).filter(User.email == user_login.email).first()
+
+        if not user or not bcrypt_hash.verify(user_login.password, user.password):
+            raise HTTPException(status_code=400, detail="Invalid email or password")
+        
+        return user
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+def verify_token(token: str, session=Depends(get_session)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[HASH])
+        user_email = payload.get("sub")
+
+        user = session.query(User).filter(User.email == user_email).first()
+
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        return user
+
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    
+
 @user_router.post("/create") 
 async def create_user(user_create: UserCreate, session=Depends(get_session)):
     """Endpoint user create"""
@@ -22,46 +53,38 @@ async def create_user(user_create: UserCreate, session=Depends(get_session)):
 
 @user_router.post("/login")
 async def login_user(user_login: UserLogin, session=Depends(get_session)):
-    user = session.query(User).filter(User.email == user_login.email).first()
-
-    if not user or not bcrypt_hash.verify(user_login.password, user.password):
-         
-        raise HTTPException(status_code=400, detail="Invalid email or password")
+        user = verify_authentication(user_login, session)
     
-    # Geração do token JWT
-    payload = {
-        "sub": user.email,
-        "exp": datetime.utcnow() + timedelta(hours=1)  
-    }
+        payload = {
+            "sub": user.email,
+            "exp": datetime.utcnow() + timedelta(hours=1)  
+        }
 
-    token = jwt.encode(payload, SECRET_KEY, algorithm=HASH)
+        token = jwt.encode(payload, SECRET_KEY, algorithm=HASH)
     
-    return {"access_token": token, "token_type": "bearer"}
+        return {"access_token": token, "token_type": "bearer"}
 
 
 @user_router.get("/me")
-async def read_current_user(token: str, session=Depends(get_session)):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[HASH])
-        user_email = payload.get("sub")
+async def read_current_user(token=str, session=Depends(get_session)):
 
-        user = session.query(User).filter(User.email == user_email).first()
+    user = verify_token(token, session)
 
-        favorite_films_response: list[FavoriteFilmResponse] = []
-        favorite_films = session.query(FavoriteFilm).filter(FavoriteFilm.user_id == user.id).all()
+    favorite_films = session.query(FavoriteFilm).filter(FavoriteFilm.user_id == user.id).all()
 
-        favorite_films_response = [
-            FavoriteFilmResponse(
-                film_name=film.film_name,
-                user_id=film.user_id
-            )
-            for film in favorite_films
-        ]
-        return UserResponse(name=user.name, email=user.email, favorite_films=favorite_films_response)
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+    favorite_films_response = [
+        FavoriteFilmResponse(
+            film_name=film.film_name,
+            user_id=film.user_id
+        )
+        for film in favorite_films
+    ]
+
+    return UserResponse(
+        name=user.name,
+        email=user.email,
+        favorite_films=favorite_films_response
+    )
     
 @user_router.post("/add_favorite")
 async def add_favorite_film(token: str, film_name: str, session=Depends(get_session)):
@@ -87,14 +110,7 @@ async def add_favorite_film(token: str, film_name: str, session=Depends(get_sess
 
 @user_router.patch("/remove_favorite")
 async def remove_favorite_film(token: str, film_name: str, session=Depends(get_session)):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[HASH])
-        user_gmail = payload.get("sub")
-
-        user = session.query(User).filter(User.gmail == user_gmail).first()
-
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+        user = verify_token(token, session)
 
         favorite_film = session.query(FavoriteFilm).filter(FavoriteFilm.film_name == film_name, FavoriteFilm.user_id == user.id).first()
 
@@ -105,71 +121,34 @@ async def remove_favorite_film(token: str, film_name: str, session=Depends(get_s
         session.commit()
 
         return {"message": "Film removed from favorites"}
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
     
 
 @user_router.patch("/update_password")
 async def update_password(token: str, new_password: str, session=Depends(get_session)):    
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[HASH])
-        user_email = payload.get("sub")
+    user = verify_token(token, session)
 
-        user = session.query(User).filter(User.email == user_email).first()
+    new_password_hash = bcrypt_hash.hash(new_password)
+    user.password = new_password_hash
+    session.commit()
 
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-
-        new_password_hash = bcrypt_hash.hash(new_password)
-        user.password = new_password_hash
-        session.commit()
-
-        return {"message": "Password updated successfully"}
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+    return {"message": "Password updated successfully"}
     
 
 @user_router.delete("/delete")
 async def delete_user(token: str, session=Depends(get_session)):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[HASH])
-        user_email = payload.get("sub")
-
-        user = session.query(User).filter(User.email == user_email).first()
-
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+        user = verify_token(token, session)
 
         session.delete(user)
         session.commit()
 
         return {"message": "User deleted successfully"}
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    
+
 user_router.get("/favorites")
 async def get_favorite_films(token: str, session=Depends(get_session)):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[HASH])
-        user_gmail = payload.get("sub")
-
-        user = session.query(User).filter(User.gmail == user_gmail).first()
-
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+        user = verify_token(token, session)
 
         favorite_films = session.query(FavoriteFilm).filter(FavoriteFilm.user_id == user.id).all()
 
         return {"favorite_films": [film.film_name for film in favorite_films]}
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    
+
     
