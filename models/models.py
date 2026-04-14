@@ -26,7 +26,7 @@ class User(Base):
 
     favorite_films = relationship("FavoriteFilm", back_populates="user", cascade="all, delete-orphan")
 
-    def __ini__(self, name, email, password):
+    def __init__(self, name, email, password):
         self.name = name
         self.email = email
         self.password = password

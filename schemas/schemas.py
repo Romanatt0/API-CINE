@@ -1,20 +1,21 @@
 # schemas.py
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+
 
 class UserCreate(BaseModel):
     email: str
     name: str
     password: str
 
-    class config:
-        from_atributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserLogin(BaseModel):
     email: str
     password: str
-    class config:
-        from_atributes = True
+
+    model_config = ConfigDict(from_attributes=True)
+
 
 class FilmRequest(BaseModel):
     name: str
@@ -22,30 +23,34 @@ class FilmRequest(BaseModel):
     description: str
     release_year: int
 
-    class config:
-        from_atributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 class FilmResponse(BaseModel):
-
     name: str
     genre: str
     description: str
     release_year: int
 
-    class config:
-        from_atributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 class FavoriteFilmResponse(BaseModel):
     film_name: str
     user_id: int
 
-    class config:
-        from_atributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 class UserResponse(BaseModel):
     name: str
     email: str
     favorite_films: list[FavoriteFilmResponse] = []
 
-    class config:
-        from_atributes = True
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"

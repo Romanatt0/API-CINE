@@ -1,10 +1,23 @@
-# API-CINE
 
-Uma API robusta e moderna para gerenciamento de filmes e usuários em plataformas de cinema. Desenvolvida com FastAPI, a API-CINE oferece funcionalidades completas para autenticação de usuários, gerenciamento de filmes favoritos e consulta de informações cinematográficas.
+# Cinema Social API
 
-## Descrição
+Este projeto é uma API voltada para uma rede social de cinema. A ideia central é permitir que pessoas apaixonadas por filmes possam se conectar, compartilhar opiniões e acompanhar novidades em um único lugar.
 
-API-CINE é uma aplicação backend desenvolvida para plataformas de streaming e catálogos de filmes. Permite que usuários se cadastrem, façam login de forma segura e gerenciem seus filmes favoritos. A API utiliza autenticação baseada em tokens JWT para garantir segurança nas rotas protegidas.
+## 🎬 Visão Geral
+
+A API será a base para um ecossistema social focado em cinema, com recursos pensados para a experiência de fãs e cinéfilos. O objetivo é criar um espaço onde usuários possam interagir, descobrir conteúdos e construir sua identidade cinematográfica.
+
+## 🎯 Objetivo do Projeto
+
+- Criar a infraestrutura de uma rede social temática de cinema.
+- Permitir que usuários registrem preferências, avaliações e comentários sobre filmes.
+- Facilitar interações sociais como seguir perfis, curtir opiniões e montar listas pessoais.
+
+## 👥 Para Quem é
+
+- Cinéfilos que gostam de registrar e compartilhar suas experiências.
+- Comunidades que desejam discutir filmes e tendências do mercado.
+- Pessoas buscando recomendações e debates sobre cinema.
 
 ## Funcionalidades
 
@@ -24,15 +37,3 @@ API-CINE é uma aplicação backend desenvolvida para plataformas de streaming e
 - **Pydantic**: Validação de dados e serialização.
 - **Python-dotenv**: Gerenciamento de variáveis de ambiente.
 - **Uvicorn**: Servidor ASGI para executar a aplicação.
-
-## Inicialização
-
-1. Comandos:
-   ```bash
-   py -m venv venv 
-
-   venv\Scripts\Activate.ps1  
-
-   pip install -r requirements.txt 
-
-   uvicorn main:app --reload
