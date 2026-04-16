@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from schemas.schemas import UserCreate, UserResponse, FavoriteFilmResponse, TokenResponse
 from dependencies.dependencies import get_session
-from models.models import FavoriteFilm, User
+from models.models import FavoriteFilm, Film, User
 from auth.auth import (
     hash_password,
     verify_password,
@@ -123,7 +123,7 @@ async def read_current_user(
     )
 
     favorite_films_response = [
-        FavoriteFilmResponse(film_name=film.film_name, user_id=film.user_id)
+        FavoriteFilmResponse(film_id=film.film_id, film_name=film.film.name, user_id=film.user_id)
         for film in favorite_films
     ]
 
@@ -136,12 +136,24 @@ async def read_current_user(
 
 @user_router.post("/add_favorite")
 async def add_favorite_film(
-    film_name: str,
+    film_id: int,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
     """Adiciona um filme aos favoritos do usuário autenticado."""
-    favorite_film = FavoriteFilm(film_name=film_name, user_id=current_user.id)
+    film = session.query(Film).filter(Film.id == film_id).first()
+    if not film:
+        raise HTTPException(status_code=404, detail="Film not found")
+
+    already_favorite = (
+        session.query(FavoriteFilm)
+        .filter(FavoriteFilm.film_id == film_id, FavoriteFilm.user_id == current_user.id)
+        .first()
+    )
+    if already_favorite:
+        raise HTTPException(status_code=400, detail="Film already in favorites")
+
+    favorite_film = FavoriteFilm(user_id=current_user.id, film_id=film_id)
     session.add(favorite_film)
     session.commit()
 
@@ -150,7 +162,7 @@ async def add_favorite_film(
 
 @user_router.patch("/remove_favorite")
 async def remove_favorite_film(
-    film_name: str,
+    film_id: int,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -158,7 +170,7 @@ async def remove_favorite_film(
     favorite_film = (
         session.query(FavoriteFilm)
         .filter(
-            FavoriteFilm.film_name == film_name,
+            FavoriteFilm.film_id == film_id,
             FavoriteFilm.user_id == current_user.id,
         )
         .first()
@@ -210,4 +222,4 @@ async def get_favorite_films(
         .all()
     )
 
-    return {"favorite_films": [film.film_name for film in favorite_films]}
+    return {"favorite_films": [{"id": f.film_id, "name": f.film.name} for f in favorite_films]}

@@ -40,6 +40,8 @@ class Film(Base):
     genre = Column(SqlEnum(Genre), nullable=False)
     release_year = Column(Integer, nullable=False)
 
+    favorited_by = relationship("FavoriteFilm", back_populates="film", cascade="all, delete-orphan")
+
     def __init__(self, name, genre: Genre, release_year, description: str | None = None):
         self.name = name
         self.genre = genre
@@ -52,11 +54,12 @@ class FavoriteFilm(Base):
     __tablename__ = "favorite_films"
 
     id = Column(Integer, primary_key=True, autoincrement=True, nullable=False, unique=True)
-    film_name = Column(String, nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"))
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    film_id = Column(Integer, ForeignKey("films.id"), nullable=False)
 
     user = relationship("User", back_populates="favorite_films")
+    film = relationship("Film", back_populates="favorited_by")
 
-    def __init__(self, film_name, user_id):
-        self.film_name = film_name
+    def __init__(self, user_id, film_id):
         self.user_id = user_id
+        self.film_id = film_id

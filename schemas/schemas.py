@@ -36,6 +36,7 @@ class FilmResponse(BaseModel):
 
 
 class FavoriteFilmResponse(BaseModel):
+    film_id: int
     film_name: str
     user_id: int
 
