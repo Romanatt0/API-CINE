@@ -203,7 +203,7 @@ async def delete_user(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
-    """Deleta a conta do usuário autenticado."""
+    
     session.delete(current_user)
     session.commit()
 
