@@ -69,38 +69,25 @@ class FavoriteFilm(Base):
         self.user_id = user_id
         self.film_id = film_id
 
-class CommentFilm(Base):
+class Comment(Base):
     __tablename__ = "comments"
 
     id = Column(Integer, primary_key=True, autoincrement=True, nullable=False, unique=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    film_id = Column(Integer, ForeignKey("films.id"), nullable=False)
+    film_id = Column(Integer, ForeignKey("films.id"), nullable=True)  # Null para replies
+    parent_id = Column(Integer, ForeignKey("comments.id"), nullable=True)  # Self-reference
     comment_text = Column(String, nullable=False)
     datetime = Column(DateTime, nullable=False)
 
+    # Relationships
     user = relationship("User")
     film = relationship("Film")
+    parent = relationship("Comment", remote_side=[id], back_populates="replies")
+    replies = relationship("Comment", back_populates="parent", cascade="all, delete-orphan")
 
-    def __init__(self, user_id, film_id, comment_text):
+    def __init__(self, user_id, comment_text, film_id=None, parent_id=None):
         self.user_id = user_id
         self.film_id = film_id
+        self.parent_id = parent_id
         self.comment_text = comment_text
-        self.datatime = datetime.datetime.now()
-
-class CommentByComment(Base):
-    __tablename__ = "comments_by_comments"
-
-    id = Column(Integer, primary_key=True, autoincrement=True, nullable=False, unique=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    comment_id = Column(Integer, ForeignKey("comments.id"), nullable=False)
-    comment_text = Column(String, nullable=False)
-    datetime = Column(DateTime, nullable=False)
-
-    user = relationship("User")
-    comment = relationship("CommentFilm")
-
-    def __init__(self, user_id, comment_id, comment_text):
-        self.user_id = user_id
-        self.comment_id = comment_id
-        self.comment_text = comment_text
-        self.datatime = datetime.datetime.now()
+        self.datetime = datetime.datetime.now()

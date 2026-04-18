@@ -37,19 +37,11 @@ async def create_user(user_create: UserCreate, session: Session = Depends(get_se
     return {"message": "User created successfully"}
 
 
-# ──────────────────────────────────────────────
-# Login — endpoint OAuth2 padrão
-# ──────────────────────────────────────────────
 @user_router.post("/login", response_model=TokenResponse)
 async def login_user(
     form_data: OAuth2PasswordRequestForm = Depends(),
     session: Session = Depends(get_session),
 ):
-    """
-    Endpoint de login OAuth2.
-    Recebe form data com campos 'username' (email) e 'password'.
-    Retorna access_token + refresh_token.
-    """
     user = session.query(User).filter(User.email == form_data.username).first()
 
     if not user or not verify_password(form_data.password, user.password):
@@ -69,14 +61,9 @@ async def login_user(
     )
 
 
-# ──────────────────────────────────────────────
-# Refresh token
-# ──────────────────────────────────────────────
 @user_router.post("/refresh", response_model=TokenResponse)
 async def refresh_token(refresh_token: str, session: Session = Depends(get_session)):
-    """
-    Recebe um refresh token válido e retorna um novo par de tokens.
-    """
+    
     try:
         payload = decode_token(refresh_token)
 
@@ -106,16 +93,11 @@ async def refresh_token(refresh_token: str, session: Session = Depends(get_sessi
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Refresh token inválido")
 
-
-# ──────────────────────────────────────────────
-# Endpoints protegidos — usam Depends(get_current_user)
-# ──────────────────────────────────────────────
 @user_router.get("/me", response_model=UserResponse)
 async def read_current_user(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
-    """Retorna dados do usuário autenticado e seus filmes favoritos."""
     favorite_films = (
         session.query(FavoriteFilm)
         .filter(FavoriteFilm.user_id == current_user.id)
@@ -140,7 +122,6 @@ async def add_favorite_film(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
-    """Adiciona um filme aos favoritos do usuário autenticado."""
     film = session.query(Film).filter(Film.id == film_id).first()
     if not film:
         raise HTTPException(status_code=404, detail="Film not found")
@@ -166,7 +147,6 @@ async def remove_favorite_film(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
-    """Remove um filme dos favoritos do usuário autenticado."""
     favorite_film = (
         session.query(FavoriteFilm)
         .filter(
