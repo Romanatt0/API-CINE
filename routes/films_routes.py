@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from schemas.schemas import FilmRequest, FilmResponse
+from schemas.film_schemas import FilmRequest, FilmResponse
 from dependencies.dependencies import get_session
 from models.models import Film, Genre, User
 from auth.dependencies import get_current_user
+from mappers.film_mapper import from_request_film, to_response_film, to_response_film_list
 
 film_router = APIRouter(prefix="/films", tags=["films"])
 
@@ -20,7 +21,7 @@ async def get_all_films(session: Session = Depends(get_session)):
     for film in films:
         session.refresh(film)
 
-    return [FilmResponse(**film.__dict__) for film in films]
+    return to_response_film_list(films)
 
 
 @film_router.get("/{film_id}", response_model=FilmResponse)
@@ -32,7 +33,7 @@ async def get_film(film_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Film not found")
 
     session.refresh(film)
-    return FilmResponse(**film.__dict__)
+    return to_response_film(film)
 
 
 # ──────────────────────────────────────────────
@@ -45,19 +46,20 @@ async def create_film(
     session: Session = Depends(get_session),
 ):
     """Cria um novo filme. Requer autenticação."""
-    film = session.query(Film).filter(Film.name == film_create.name).first()
+    payload = from_request_film(film_create)
+    film = session.query(Film).filter(Film.name == payload["name"]).first()
 
     if film:
         raise HTTPException(status_code=400, detail="Film already exists")
 
-    if film_create.genre not in Genre.__members__:
+    if payload["genre"] not in Genre.__members__:
         raise HTTPException(status_code=400, detail="Invalid genre")
 
     new_film = Film(
-        name=film_create.name,
-        description=film_create.description,
-        genre=film_create.genre,
-        release_year=film_create.release_year,
+        name=payload["name"],
+        description=payload["description"],
+        genre=payload["genre"],
+        release_year=payload["release_year"],
     )
     session.add(new_film)
     session.commit()
@@ -78,13 +80,14 @@ async def update_film(
     if not film:
         raise HTTPException(status_code=404, detail="Film not found")
 
-    if film_update.genre not in Genre.__members__:
+    payload = from_request_film(film_update)
+    if payload["genre"] not in Genre.__members__:
         raise HTTPException(status_code=400, detail="Invalid genre")
 
-    film.name = film_update.name
-    film.description = film_update.description
-    film.genre = film_update.genre
-    film.release_year = film_update.release_year
+    film.name = payload["name"]
+    film.description = payload["description"]
+    film.genre = payload["genre"]
+    film.release_year = payload["release_year"]
 
     session.commit()
 

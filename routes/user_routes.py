@@ -2,9 +2,18 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
-from schemas.schemas import UserCreate, UserResponse, FavoriteFilmResponse, TokenResponse
+from schemas.user_schemas import UserCreate, UserResponse
+from schemas.token_schemas import TokenResponse
 from dependencies.dependencies import get_session
 from models.models import FavoriteFilm, Film, User
+from mappers.user_mapper import (
+    from_request_create_user,
+    from_request_login,
+    from_request_refresh,
+    to_response_favorites_list,
+    to_response_token,
+    to_response_user,
+)
 from auth.auth import (
     hash_password,
     verify_password,
@@ -29,30 +38,24 @@ async def create_user(user_create: UserCreate, session: Session = Depends(get_se
     if user:
         raise HTTPException(status_code=400, detail="User already exists")
 
-    password_hashed = hash_password(user_create.password)
-    new_user = User(name=user_create.name, email=user_create.email, password=password_hashed)
+    payload = from_request_create_user(user_create)
+    password_hashed = hash_password(payload["password"])
+    new_user = User(name=payload["name"], email=payload["email"], password=password_hashed)
     session.add(new_user)
     session.commit()
 
     return {"message": "User created successfully"}
 
 
-# ──────────────────────────────────────────────
-# Login — endpoint OAuth2 padrão
-# ──────────────────────────────────────────────
 @user_router.post("/login", response_model=TokenResponse)
 async def login_user(
     form_data: OAuth2PasswordRequestForm = Depends(),
     session: Session = Depends(get_session),
 ):
-    """
-    Endpoint de login OAuth2.
-    Recebe form data com campos 'username' (email) e 'password'.
-    Retorna access_token + refresh_token.
-    """
-    user = session.query(User).filter(User.email == form_data.username).first()
+    payload = from_request_login(form_data)
+    user = session.query(User).filter(User.email == payload["email"]).first()
 
-    if not user or not verify_password(form_data.password, user.password):
+    if not user or not verify_password(payload["password"], user.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email ou senha incorretos",
@@ -62,31 +65,22 @@ async def login_user(
     access_token = create_access_token(data={"sub": user.email})
     refresh_token = create_refresh_token(data={"sub": user.email})
 
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        token_type="bearer",
-    )
+    return to_response_token(access_token=access_token, refresh_token=refresh_token)
 
 
-# ──────────────────────────────────────────────
-# Refresh token
-# ──────────────────────────────────────────────
 @user_router.post("/refresh", response_model=TokenResponse)
 async def refresh_token(refresh_token: str, session: Session = Depends(get_session)):
-    """
-    Recebe um refresh token válido e retorna um novo par de tokens.
-    """
+    payload = from_request_refresh(refresh_token)
     try:
-        payload = decode_token(refresh_token)
+        payload_decoded = decode_token(payload["refresh_token"])
 
-        if payload.get("type") != "refresh":
+        if payload_decoded.get("type") != "refresh":
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token inválido. Envie um refresh token.",
             )
 
-        user_email = payload.get("sub")
+        user_email = payload_decoded.get("sub")
         user = session.query(User).filter(User.email == user_email).first()
 
         if not user:
@@ -95,10 +89,9 @@ async def refresh_token(refresh_token: str, session: Session = Depends(get_sessi
         new_access_token = create_access_token(data={"sub": user.email})
         new_refresh_token = create_refresh_token(data={"sub": user.email})
 
-        return TokenResponse(
+        return to_response_token(
             access_token=new_access_token,
             refresh_token=new_refresh_token,
-            token_type="bearer",
         )
 
     except jwt.ExpiredSignatureError:
@@ -106,32 +99,17 @@ async def refresh_token(refresh_token: str, session: Session = Depends(get_sessi
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Refresh token inválido")
 
-
-# ──────────────────────────────────────────────
-# Endpoints protegidos — usam Depends(get_current_user)
-# ──────────────────────────────────────────────
 @user_router.get("/me", response_model=UserResponse)
 async def read_current_user(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
-    """Retorna dados do usuário autenticado e seus filmes favoritos."""
     favorite_films = (
         session.query(FavoriteFilm)
         .filter(FavoriteFilm.user_id == current_user.id)
         .all()
     )
-
-    favorite_films_response = [
-        FavoriteFilmResponse(film_id=film.film_id, film_name=film.film.name, user_id=film.user_id)
-        for film in favorite_films
-    ]
-
-    return UserResponse(
-        name=current_user.name,
-        email=current_user.email,
-        favorite_films=favorite_films_response,
-    )
+    return to_response_user(current_user=current_user, favorite_films=favorite_films)
 
 
 @user_router.post("/add_favorite")
@@ -140,7 +118,6 @@ async def add_favorite_film(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
-    """Adiciona um filme aos favoritos do usuário autenticado."""
     film = session.query(Film).filter(Film.id == film_id).first()
     if not film:
         raise HTTPException(status_code=404, detail="Film not found")
@@ -166,7 +143,6 @@ async def remove_favorite_film(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
-    """Remove um filme dos favoritos do usuário autenticado."""
     favorite_film = (
         session.query(FavoriteFilm)
         .filter(
@@ -203,7 +179,7 @@ async def delete_user(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
-    """Deleta a conta do usuário autenticado."""
+    
     session.delete(current_user)
     session.commit()
 
@@ -222,4 +198,4 @@ async def get_favorite_films(
         .all()
     )
 
-    return {"favorite_films": [{"id": f.film_id, "name": f.film.name} for f in favorite_films]}
+    return to_response_favorites_list(favorite_films)
