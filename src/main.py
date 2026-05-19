@@ -6,9 +6,9 @@ app = FastAPI(
     version="1.0.0",
 )
 
-from routes.films_routes import film_router
-from routes.user_routes import user_router
-from routes.comments_routes import comments_router
+from src.routes.films_routes import film_router
+from src.routes.user_routes import user_router
+from src.routes.comments_routes import comments_router
 
 app.include_router(film_router)
 app.include_router(user_router)

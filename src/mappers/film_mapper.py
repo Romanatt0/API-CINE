@@ -1,5 +1,5 @@
-from schemas.film_schemas import FilmRequest, FilmResponse
-from models.models import Film
+from src.schemas.film_schemas import FilmRequest, FilmResponse
+from src.models.models import Film
 
 
 def from_request_film(film_request: FilmRequest) -> dict:

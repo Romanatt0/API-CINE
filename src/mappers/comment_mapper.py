@@ -1,5 +1,5 @@
-from schemas.comment_schemas import CommentRequest, CommentResponse
-from models.models import Comment
+from src.schemas.comment_schemas import CommentRequest, CommentResponse
+from src.models.models import Comment
 
 
 def from_request_comment(payload: CommentRequest) -> dict:

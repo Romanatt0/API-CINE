@@ -1,8 +1,8 @@
 from fastapi.security import OAuth2PasswordRequestForm
 
-from schemas.user_schemas import FavoriteFilmResponse, UserCreate, UserResponse
-from schemas.token_schemas import TokenResponse
-from models.models import FavoriteFilm, User
+from src.schemas.user_schemas import FavoriteFilmResponse, UserCreate, UserResponse
+from src.schemas.token_schemas import TokenResponse
+from src.models.models import FavoriteFilm, User
 
 
 def from_request_create_user(user_create: UserCreate) -> dict:

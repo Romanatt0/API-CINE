@@ -12,6 +12,7 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     email: str
     password: str
+    acess: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

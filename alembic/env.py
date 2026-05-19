@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
-from models.models import Base
+from src.models.models import Base
 from alembic import context
 
 # this is the Alembic Config object, which provides

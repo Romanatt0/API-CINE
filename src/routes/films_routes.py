@@ -1,18 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from schemas.film_schemas import FilmRequest, FilmResponse
-from dependencies.dependencies import get_session
-from models.models import Film, Genre, User
-from auth.dependencies import get_current_user
-from mappers.film_mapper import from_request_film, to_response_film, to_response_film_list
+from src.schemas.film_schemas import FilmRequest, FilmResponse
+from src.dependencies.dependencies import get_session
+from src.models.models import Film, Genre, User
+from src.auth.dependencies import get_current_user
+from src.mappers.film_mapper import from_request_film, to_response_film, to_response_film_list
 
 film_router = APIRouter(prefix="/films", tags=["films"])
 
 
-# ──────────────────────────────────────────────
-# Endpoints públicos (leitura)
-# ──────────────────────────────────────────────
 @film_router.get("/all", response_model=list[FilmResponse])
 async def get_all_films(session: Session = Depends(get_session)):
     """Lista todos os filmes. Endpoint público."""
@@ -36,9 +33,6 @@ async def get_film(film_id: int, session: Session = Depends(get_session)):
     return to_response_film(film)
 
 
-# ──────────────────────────────────────────────
-# Endpoints protegidos (escrita) — requerem autenticação
-# ──────────────────────────────────────────────
 @film_router.post("/create", status_code=status.HTTP_201_CREATED, response_model=dict)
 async def create_film(
     film_create: FilmRequest,
@@ -46,6 +40,10 @@ async def create_film(
     session: Session = Depends(get_session),
 ):
     """Cria um novo filme. Requer autenticação."""
+
+    if current_user.access != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
     payload = from_request_film(film_create)
     film = session.query(Film).filter(Film.name == payload["name"]).first()
 
@@ -75,6 +73,9 @@ async def update_film(
     session: Session = Depends(get_session),
 ):
     """Atualiza um filme existente. Requer autenticação."""
+
+    if current_user.access != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
     film = session.query(Film).filter(Film.id == film_id).first()
 
     if not film:
@@ -101,6 +102,10 @@ async def delete_film(
     session: Session = Depends(get_session),
 ):
     """Deleta um filme. Requer autenticação."""
+
+    if current_user.access != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
     film = session.query(Film).filter(Film.id == film_id).first()
 
     if not film:

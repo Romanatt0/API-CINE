@@ -2,9 +2,9 @@ from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 import jwt
 
-from auth.auth import oauth2_scheme, decode_token
-from dependencies.dependencies import get_session
-from models.models import User
+from src.auth.auth import oauth2_scheme, decode_token
+from src.dependencies.dependencies import get_session
+from src.models.models import User
 
 
 def get_current_user(

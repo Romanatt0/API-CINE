@@ -2,11 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
-from schemas.user_schemas import UserCreate, UserResponse
-from schemas.token_schemas import TokenResponse
-from dependencies.dependencies import get_session
-from models.models import FavoriteFilm, Film, User
-from mappers.user_mapper import (
+from src.schemas.user_schemas import UserCreate, UserResponse
+from src.schemas.token_schemas import TokenResponse
+from src.dependencies.dependencies import get_session
+from src.models.models import FavoriteFilm, Film, User
+from src.mappers.user_mapper import (
     from_request_create_user,
     from_request_login,
     from_request_refresh,
@@ -14,22 +14,18 @@ from mappers.user_mapper import (
     to_response_token,
     to_response_user,
 )
-from auth.auth import (
+from src.auth.auth import (
     hash_password,
     verify_password,
     create_access_token,
     create_refresh_token,
     decode_token,
 )
-from auth.dependencies import get_current_user
+from src.auth.dependencies import get_current_user
 import jwt
 
 user_router = APIRouter(prefix="/users", tags=["users"])
 
-
-# ──────────────────────────────────────────────
-# Registro
-# ──────────────────────────────────────────────
 @user_router.post("/create", status_code=status.HTTP_201_CREATED)
 async def create_user(user_create: UserCreate, session: Session = Depends(get_session)):
     """Cria um novo usuário."""
